@@ -13,6 +13,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Arrays;
 import java.util.Random;
+import java.awt.Font;
+import javax.swing.SwingConstants;
+
+import org.w3c.dom.css.RGBColor;
+import java.awt.Color;
 
 public class MainGUI {
 
@@ -26,6 +31,7 @@ public class MainGUI {
 	private JButton kocka5;
 	private JButton[] fields;
 	private JButton[] kocke;
+	private JLabel[] enemyFields;
 	Client client;
 	Game game;
 	private JLabel lblNewLabel_1;
@@ -60,7 +66,11 @@ public class MainGUI {
 		frame = new JFrame();
 		
 		prepareFields();
-		for (int i = 0; i < 64; i++) frame.getContentPane().add(getFields(fields[i], i));
+		prepareEnemyFields();
+		for (int i = 0; i < 64; i++) {
+			frame.getContentPane().add(getFields(fields[i], i));
+			frame.getContentPane().add(enemyFields[i]);
+		}
 		
 		frame.setBounds(100, 100, 833, 815);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -86,6 +96,14 @@ public class MainGUI {
 			lblNewLabel.setBounds(6, 11, 359, 608);
 		}
 		return lblNewLabel;
+	}
+	private JLabel getLblNewLabel_1() {
+		if (lblNewLabel_1 == null) {
+			lblNewLabel_1 = new JLabel("");
+			lblNewLabel_1.setIcon(new ImageIcon("C:\\Users\\Vule\\Desktop\\Capture.PNG"));
+			lblNewLabel_1.setBounds(448, 11, 359, 608);
+		}
+		return lblNewLabel_1;
 	}
 	private JButton getKocka1() {
 		if (kocka1 == null) {
@@ -183,6 +201,9 @@ public class MainGUI {
 		
 		return field;
 	}
+	private JLabel getEnemyFields(JLabel enemyField) {
+		return enemyField;
+	}
 	private void prepareFields() {
 		if (fields == null) {
 			int x = 81;
@@ -208,6 +229,33 @@ public class MainGUI {
 			}
 		}
 	}
+	private void prepareEnemyFields() {
+		if (enemyFields == null) {
+			int x = 521;
+			int y = 64;
+			enemyFields = new JLabel[64];
+			for (int i = 0; i < 64; i++) {
+				enemyFields[i] = new JLabel("enemyFields" + String.valueOf(i));
+				enemyFields[i].setBounds(x, y, 46, 14);
+				enemyFields[i].setFont(new Font("Tahoma", Font.PLAIN, 14));
+				enemyFields[i].setHorizontalAlignment(SwingConstants.CENTER);
+				enemyFields[i].setForeground(Color.RED);
+				enemyFields[i].setBorder(null);
+				
+				if (i == 6 || i == 9 || i == 15 || i == 22 || i == 25 || i == 31 || i == 38 || i == 41 || i == 47 || i == 54
+						|| i == 57 || i == 63) {
+					enemyFields[i].setText("0");
+				}
+				else enemyFields[i].setText("");
+				
+				y += 35;
+				if (i == 15 || i == 31 || i == 47) {
+					x += 62;
+					y = 64;
+				}
+			}
+		}
+	}
 	private void prepareKocke() {
 		kocke = new JButton[5];
 		kocke[0] = kocka1;
@@ -216,12 +264,5 @@ public class MainGUI {
 		kocke[3] = kocka4;
 		kocke[4] = kocka5;
 	}
-	private JLabel getLblNewLabel_1() {
-		if (lblNewLabel_1 == null) {
-			lblNewLabel_1 = new JLabel("");
-			lblNewLabel_1.setIcon(new ImageIcon("C:\\Users\\Vule\\Desktop\\Capture.PNG"));
-			lblNewLabel_1.setBounds(448, 11, 359, 608);
-		}
-		return lblNewLabel_1;
-	}
+
 }
