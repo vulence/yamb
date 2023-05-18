@@ -23,6 +23,7 @@ public class MainGUI {
 
 	private JFrame frame;
 	private JLabel lblNewLabel;
+	private JLabel lblNewLabel_1;
 	private JButton baciKocke;
 	private JButton kocka1;
 	private JButton kocka2;
@@ -32,9 +33,8 @@ public class MainGUI {
 	private JButton[] fields;
 	private JButton[] kocke;
 	private JLabel[] enemyFields;
-	Client client;
 	Game game;
-	private JLabel lblNewLabel_1;
+	EndGUI endWindow;
 
 	/**
 	 * Launch the application.
@@ -86,22 +86,22 @@ public class MainGUI {
 		
 		prepareKocke();
 		
-		client = new Client();
-		game = new Game(kocke, fields);
+		game = new Game(kocke, fields, enemyFields, baciKocke);
+		game.start();
 	}
 	private JLabel getLblNewLabel() {
 		if (lblNewLabel == null) {
 			lblNewLabel = new JLabel("");
-			lblNewLabel.setIcon(new ImageIcon("C:\\Users\\Vule\\Desktop\\Capture.PNG"));
-			lblNewLabel.setBounds(6, 11, 359, 608);
+			lblNewLabel.setIcon(new ImageIcon("E:\\Programiranje\\Yamb\\Client\\resources\\yamb.PNG"));
+			lblNewLabel.setBounds(10, 11, 314, 608);
 		}
 		return lblNewLabel;
 	}
 	private JLabel getLblNewLabel_1() {
 		if (lblNewLabel_1 == null) {
 			lblNewLabel_1 = new JLabel("");
-			lblNewLabel_1.setIcon(new ImageIcon("C:\\Users\\Vule\\Desktop\\Capture.PNG"));
-			lblNewLabel_1.setBounds(448, 11, 359, 608);
+			lblNewLabel_1.setIcon(new ImageIcon("E:\\Programiranje\\Yamb\\Client\\resources\\yamb.PNG"));
+			lblNewLabel_1.setBounds(451, 11, 314, 608);
 		}
 		return lblNewLabel_1;
 	}
@@ -164,8 +164,9 @@ public class MainGUI {
 	private JButton getKocka5() {
 		if (kocka5 == null) {
 			kocka5 = new JButton("");
-			kocka5.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent e) {
+			kocka5.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
 					if (kocka5.isEnabled() && !kocka5.getText().equals("")) kocka5.setEnabled(false);
 					else kocka5.setEnabled(true);
 				}
@@ -179,7 +180,12 @@ public class MainGUI {
 			baciKocke = new JButton("BACAJ");
 			baciKocke.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
-					game.baciKocke();
+					if (game.checkEnd()) {
+						endWindow = new EndGUI(game.getTotalSum());
+						endWindow.setVisible(true);
+						frame.setEnabled(false);
+					}
+					game.baciKocke(baciKocke);
 				}
 			});
 			baciKocke.setBounds(148, 742, 89, 23);
@@ -187,8 +193,9 @@ public class MainGUI {
 		return baciKocke;
 	}
 	private JButton getFields(JButton field, int i) {
-		field.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
+		field.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
 				if ((i >= 0 && i <= 5) || (i >= 16 && i <= 21) || (i >= 32 && i <= 37) || (i >= 48 && i <= 53)) game.poljeBroja(i);
 				else if (Arrays.asList(7, 8, 23, 24, 39, 40, 55, 56).contains(i)) game.poljeMinMax(i);
 				else if (Arrays.asList(10, 26, 42, 58).contains(i)) game.poljeTriling(i);
@@ -200,9 +207,6 @@ public class MainGUI {
 		});
 		
 		return field;
-	}
-	private JLabel getEnemyFields(JLabel enemyField) {
-		return enemyField;
 	}
 	private void prepareFields() {
 		if (fields == null) {

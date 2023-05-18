@@ -1,18 +1,46 @@
 package main;
 
-import java.util.Arrays;
+import java.awt.Color;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JLabel;
 
-public class Game {
+public class Game extends Thread {
 	private JButton[] kocke;
 	private JButton[] fields;
-	private int potez;
+	private JButton baciKocke;
+	private JLabel[] enemyFields;
+	private int counter;
+	private static final int PORT = 4444;
+	private Socket socket;
+	private ServerSocket serverSocket;
+	private OutputStream out;
+	private InputStream in;
+	private PrintStream ps;
+	private BufferedReader kb;
+	private AtomicBoolean yourTurn, najava;
+	private int najavaPolje;
 	
-	public Game(JButton[] kocke, JButton[] fields) {
+	public Game(JButton[] kocke, JButton[] fields, JLabel[] enemyFields, JButton baciKocke) {
+		this.counter = 0;
 		this.kocke = kocke;
 		this.fields = fields;
+		this.enemyFields = enemyFields;
+		this.baciKocke = baciKocke;
+		this.yourTurn = new AtomicBoolean(false);
+		this.najava = new AtomicBoolean(false);
+		this.najavaPolje = -1;
 		setup();
 	}
 	
@@ -21,9 +49,24 @@ public class Game {
 		for (int i = 32; i < 46; i++) fields[i].setEnabled(false);
 	}
 	
-	public void baciKocke() {
-		Random rand = new Random();
-		for (int i = 0; i < 5; i++) if (kocke[i].isEnabled()) kocke[i].setText(Integer.toString(rand.nextInt(6) + 1));
+	public void baciKocke(JButton baciKocke) {
+		if (!checkEnd()) {
+			if (najava.get()) disableFields();
+			
+			disableNajava();
+			counter++;
+			
+			Random rand = new Random();
+			for (int i = 0; i < 5; i++) if (kocke[i].isEnabled()) kocke[i].setText(Integer.toString(rand.nextInt(6) + 1));
+			
+			if (counter == 3) {
+				disableKocke();
+				//if (najava.get()) upisiNajavu();
+			}
+		}
+		else {
+			sendData(-1, -1, new int[] {-1, -1});
+		}
 	}
 	
 	public int[] getKocke() {
@@ -35,35 +78,63 @@ public class Game {
 	}
 	
 	public void poljeBroja(int i) {
+		if (counter == 0) {
+			proveriNajavu(i);
+			return;
+		}
+		
+		if (!fields[i].isEnabled()) return;
+		
 		int brojKocke = i;
 		int[] sveKocke = getKocke();
 		if (i >= 0 && i <= 5) brojKocke++;
 		else if (i >= 16 && i <= 21) brojKocke -= 15;
 		else if (i >= 32 && i <= 37) brojKocke -= 31;
-		else brojKocke -= 48;
+		else brojKocke -= 47;
 		fields[i].setText(Integer.toString(sveKocke[brojKocke]*brojKocke));
-		//updatesum(i);
+		sendData(i, sveKocke[brojKocke]*brojKocke, updateSum(i));
 	}
 	
 	public void poljeMinMax(int i) {
+		if (counter == 0) { 
+			proveriNajavu(i);
+			return;
+		}
+		
+		if (!fields[i].isEnabled()) return;
+		
 		int sum = 0;
 		int[] sveKocke = getKocke();
 		for (int j = 1; j < sveKocke.length; j++) sum += sveKocke[j]*j;
 		fields[i].setText(Integer.toString(sum));
-		//updateSum(i);
+		sendData(i, sum, updateSum(i));
 	}
 	
 	public void poljeTriling(int i) {
+		if (counter == 0) {
+			proveriNajavu(i);
+			return;
+		}
+		
+		if (!fields[i].isEnabled()) return;
+		
 		int sum = 0;
 		int[] sveKocke = getKocke();
 		for (int j = 1; j < sveKocke.length; j++) {
 			if (sveKocke[j] == 3) sum = sveKocke[j]*j + 20;
 		}
 		fields[i].setText(Integer.toString(sum));
-		//updateSum(i);
+		sendData(i, sum, updateSum(i));
 	}
 	
 	public void poljeKenta(int i) {
+		if (counter == 0) {
+			proveriNajavu(i);
+			return;
+		}
+		
+		if (!fields[i].isEnabled()) return;
+		
 		int sum = 0;
 		int br = 0;
 		int[] sveKocke = getKocke();
@@ -75,12 +146,28 @@ public class Game {
 			if (sveKocke[j] == 0) br = 0;
 		}
 		
-		if (br == 5) fields[i].setText(Integer.toString(sum));
-		else fields[i].setText("0");
-		//updateSum(i);
+		if (br == 5) {
+			if (counter == 1) sum += 66;
+			else if (counter == 2) sum += 56;
+			else sum += 46;
+			
+			fields[i].setText(Integer.toString(sum));
+			sendData(i, sum, updateSum(i));
+		}
+		else {
+			fields[i].setText("0");
+			sendData(i, 0, updateSum(i));
+		}
 	}
 	
 	public void poljeFul(int i) {
+		if (counter == 0) {
+			proveriNajavu(i);
+			return;
+		}
+		
+		if (!fields[i].isEnabled()) return;
+		
 		int[] sveKocke = getKocke();
 		int dva = -1, tri = -1;
 		
@@ -89,35 +176,401 @@ public class Game {
 			if (sveKocke[j] == 3) tri = j;
 		}
 		
-		if (dva == -1 || tri == -1) fields[i].setText("0");
-		else fields[i].setText(Integer.toString(sveKocke[dva]*dva+sveKocke[tri]*tri+30));
+		if (dva == -1 || tri == -1) {
+			fields[i].setText("0");
+			sendData(i, 0, updateSum(i));
+		}
+		else {
+			fields[i].setText(Integer.toString(sveKocke[dva]*dva+sveKocke[tri]*tri+30));
+			sendData(i, sveKocke[dva]*dva+sveKocke[tri]*tri+30, updateSum(i));
+		}
 	}
 	
 	public void poljePoker(int i) {
+		if (counter == 0) {
+			proveriNajavu(i);
+			return;
+		}
+		
+		if (!fields[i].isEnabled()) return;
+		
 		int[] sveKocke = getKocke();
 		for (int j = 1; j < sveKocke.length; j++) {
 			if (sveKocke[j] == 4) {
 				fields[i].setText(Integer.toString(sveKocke[j]*j+40));
+				sendData(i,sveKocke[j]*j+40, updateSum(i));
 				return;
 			}
 		}
 		
 		fields[i].setText("0");
+		sendData(i, 0, updateSum(i));
 	}
 	
 	public void poljeJamb(int i) {
+		if (counter == 0) {
+			proveriNajavu(i);
+			return;
+		}
+		
+		if (!fields[i].isEnabled()) return;
+		
 		int[] sveKocke = getKocke();
 		for (int j = 1; j < sveKocke.length; j++) {
 			if (sveKocke[j] == 5) {
 				fields[i].setText(Integer.toString(sveKocke[j]*j+50));
+				sendData(i, sveKocke[j]*j+50, updateSum(i));
 				return;
 			}
 		}
 		
 		fields[i].setText("0");
+		sendData(i, 0, updateSum(i));
 	}
 	
-	public void updateSum(int i) {
+	public void upisiNajavu() {
+		fields[najavaPolje].setBorder(fields[1].getBorder());
 		
+		if (najavaPolje >= 48 && najavaPolje <= 53) poljeBroja(najavaPolje);
+		else if (najavaPolje >= 54 && najavaPolje <= 56) poljeMinMax(najavaPolje);
+		else if (najavaPolje == 58) poljeTriling(najavaPolje);
+		else if (najavaPolje == 59) poljeKenta(najavaPolje);
+		else if (najavaPolje == 60) poljeFul(najavaPolje);
+		else if (najavaPolje == 61) poljePoker(najavaPolje);
+		else poljeJamb(najavaPolje);
+	}
+	
+	public void proveriNajavu(int i) {
+		if (i < 48) return;
+		
+		if (najava.get()) {
+			fields[najavaPolje].setBorder(fields[1].getBorder());
+			najava.set(false);
+		}
+		
+		if (i != najavaPolje) {
+			najava.set(true);
+			fields[i].setBorder(BorderFactory.createLineBorder(Color.RED, 4));
+			najavaPolje = i;
+		}
+	}
+	
+	public int[] updateSum(int i) {
+		int sum = 0;
+		int[] res = {-1, -1};
+		
+		if (i < 6) {
+			for (int j = 0; j < 6; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			sum += sum >= 60 ? 30 : 0;
+			
+			fields[6].setText(Integer.toString(sum));
+			res[0] = 6;
+			res[1] = sum;
+		}
+		else if (i < 9) {
+			for (int j =  7; j < 9; j++) {
+				if (fields[j].getText().equals("")) return res;
+			}
+			
+			sum = Integer.parseInt(fields[7].getText()) - Integer.parseInt(fields[8].getText());
+			
+			fields[9].setText(Integer.toString(sum));
+			res[0] = 9;
+			res[1] = sum;
+		}
+		else if (i < 15) {
+			for (int j = 10; j < 15; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			fields[15].setText(Integer.toString(sum));
+			res[0] = 15;
+			res[1] = sum;
+		}
+		else if (i < 22) {
+			for (int j = 16; j < 22; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			fields[22].setText(Integer.toString(sum));
+			res[0] = 22;
+			res[1] = sum;
+		}
+		else if (i < 25) {
+			for (int j = 23; j < 25; j++) {
+				if (fields[j].getText().equals("")) return res;
+			}
+			
+			sum = Integer.parseInt(fields[23].getText()) - Integer.parseInt(fields[24].getText());
+			
+			fields[25].setText(Integer.toString(sum));
+			res[0] = 25;
+			res[1] = sum;
+		}
+		else if (i < 31) {
+			for (int j = 26; j < 31; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			fields[31].setText(Integer.toString(sum));
+			res[0] = 31;
+			res[1] = sum;
+		}
+		else if (i < 38) {
+			for (int j = 32; j < 38; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			fields[38].setText(Integer.toString(sum));
+			res[0] = 38;
+			res[1] = sum;
+		}
+		else if (i < 41) {
+			for (int j = 39; j < 41; j++) {
+				if (fields[j].getText().equals("")) return res;
+			}
+			
+			sum = Integer.parseInt(fields[39].getText()) - Integer.parseInt(fields[40].getText());
+			
+			fields[41].setText(Integer.toString(sum));
+			res[0] = 41;
+			res[1] = sum;
+		}
+		else if (i < 47) {
+			for (int j = 42; j < 47; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			fields[47].setText(Integer.toString(sum));
+			res[0] = 47;
+			res[1] = sum;
+		}
+		else if (i < 54) {
+			for (int j = 48; j < 54; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			fields[54].setText(Integer.toString(sum));
+			res[0] = 54;
+			res[1] = sum;
+		}
+		else if (i < 57) {
+			for (int j = 55; j < 57; j++) {
+				if (fields[j].getText().equals("")) return res;
+			}
+			
+			sum = Integer.parseInt(fields[55].getText()) - Integer.parseInt(fields[56].getText());
+			
+			fields[57].setText(Integer.toString(sum));
+			res[0] = 57;
+			res[1] = sum;
+		}
+		else {
+			for (int j = 58; j < 63; j++) {
+				if (fields[j].getText().equals("")) return res;
+				
+				sum += Integer.parseInt(fields[j].getText());
+			}
+			
+			fields[63].setText(Integer.toString(sum));
+			res[0] = 63;
+			res[1] = sum;
+		}
+		
+		return res;
+	}
+	
+	public int getTotalSum() {
+		int totalSum = 0;
+		for (int i = 6; i < fields.length; i += 16) totalSum += Integer.parseInt(fields[i].getText());
+		for (int i = 9; i < fields.length; i += 16) totalSum += Integer.parseInt(fields[i].getText());
+		for (int i = 15; i < fields.length; i += 16) totalSum += Integer.parseInt(fields[i].getText());
+		
+		return totalSum;
+	}
+	
+	// tries to connect to an existing client
+	private boolean connect() {
+		try {
+			socket = new Socket("localhost", PORT);
+			yourTurn.set(false);
+			disableKocke();
+			disableFields();
+			clearKocke();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false; // if doesn't succeed, returns false to start a server
+		}
+		
+		return true;
+	}
+	
+	private void startServer() {
+		try {
+			serverSocket = new ServerSocket(PORT);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void listener() {
+		try {
+			socket = serverSocket.accept();
+			yourTurn.set(true);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private void init() {
+		if (!connect()) {
+			startServer();
+			listener();
+		}
+		
+		try {
+			in = socket.getInputStream();
+			kb = new BufferedReader(new InputStreamReader(in));
+			
+			out = socket.getOutputStream();
+			ps = new PrintStream(out, true);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		counter = 0;
+	}
+	
+	private void sendData(int i, int val, int[] sum) {
+		ps.println(i); // index polja koje se update
+		ps.println(val); // vrednost koja treba da se nalazi polju
+		ps.println(sum[0]); // indeks polja sume koje treba da se update
+		ps.println(sum[1]); // vrednost polja sume
+		
+		clearAll();
+	}
+	
+	private void clearAll() {
+		counter = 0;
+		if (najavaPolje != -1) fields[najavaPolje].setBorder(fields[1].getBorder());
+		najavaPolje = -1;
+		yourTurn.set(false);
+		najava.set(false);
+		disableKocke();
+		disableFields();
+		clearKocke();
+	}
+	
+	public boolean checkEnd() {
+		if (!yourTurn.get()) return false;
+		
+		boolean end = true;
+			
+		for (int i = 0; i < fields.length; i++) {
+			if (fields[i].isEnabled()) return false;
+		}
+		
+		return true;
+	}
+	
+	private void enableButtons() {
+		baciKocke.setEnabled(true);
+		
+		for (int i = 0; i < 14; i++) {
+			if (i == 0 && fields[i].getText().equals("")) {
+				fields[i].setEnabled(true);
+				break;
+			}
+			
+			if (!fields[i].getText().equals("") && fields[i + 1].getText().equals("")) {
+				fields[i + 1].setEnabled(true);
+				break;
+			}
+		}
+		
+		for (int i = 16; i < 32; i++) {
+			if (fields[i].getText().equals("")) fields[i].setEnabled(true);
+		}
+		
+		for (int i = 46; i > 32; i--) {
+			if (i == 46 && fields[i].getText().equals("")) {
+				fields[i].setEnabled(true);
+				break;
+			}
+			
+			if (!fields[i].getText().equals("") && fields[i - 1].getText().equals("")) {
+				fields[i - 1].setEnabled(true);
+				break;
+			}
+		}
+		
+		for (int i = 48; i < fields.length; i++) {
+			if (fields[i].getText().equals("")) fields[i].setEnabled(true);
+		}
+		
+		for (int i = 0; i < kocke.length; i++) kocke[i].setEnabled(true);
+	}
+	
+	private void disableFields() {
+		for (int i = 0; i < fields.length; i++) if (i != najavaPolje) fields[i].setEnabled(false);
+	}
+	
+	private void disableKocke() {
+		baciKocke.setEnabled(false);
+		for (int i = 0; i < kocke.length; i++) kocke[i].setEnabled(false);
+	}
+	
+	private void clearKocke() {
+		for (int i = 0; i < kocke.length; i++) kocke[i].setText("");
+	}
+	
+	private void disableNajava() {
+		for (int i = 48; i < 64; i++) if (i != najavaPolje) fields[i].setEnabled(false);
+	}
+	
+	private void tick() {		
+		String buf, value, sumValue;
+		int index, sumIndex;
+		if (yourTurn.compareAndSet(false, true)) {
+			try {
+				buf = kb.readLine();
+				index = Integer.parseInt(buf);
+				if (index != -1) { // ovo je za proveru kraja
+					value = kb.readLine();
+					enemyFields[index].setText(value);
+					
+					buf = kb.readLine();
+					sumIndex = Integer.parseInt(buf);
+					sumValue = kb.readLine();
+					
+					if (sumIndex != -1) enemyFields[sumIndex].setText(sumValue); // ovo je za proveru da li se sum polje updatuje
+					enableButtons();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	public void run() {
+		init();
+		while (true) tick();
 	}
 }
