@@ -76,6 +76,7 @@ public class Game extends Thread {
 		sveKocke[1] = sveKocke[2] = sveKocke[3] = sveKocke[4] = sveKocke[5] = sveKocke[6] = 0;
 		for (int i = 0; i < kocke.length; i++) sveKocke[Integer.parseInt(kocke[i].getText())]++;
 		
+		
 		return sveKocke;
 	}
 	
@@ -123,7 +124,7 @@ public class Game extends Thread {
 		int sum = 0;
 		int[] sveKocke = getKocke();
 		for (int j = 1; j < sveKocke.length; j++) {
-			if (sveKocke[j] == 3) sum = sveKocke[j]*j + 20;
+			if (sveKocke[j] >= 3) sum = 3*j + 20;
 		}
 		fields[i].setText(Integer.toString(sum));
 		sendData(i, sum, updateSum(i));
