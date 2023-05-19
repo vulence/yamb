@@ -68,7 +68,6 @@ public class Game extends Thread {
 			
 		if (counter == 3) {
 			disableKocke();
-			//if (najava.get()) upisiNajavu();
 		}
 	}
 	
@@ -244,7 +243,7 @@ public class Game extends Thread {
 	}
 	
 	public void proveriNajavu(int i) {
-		if (i < 48) return;
+		if (!yourTurn.get() || i < 48) return;
 		
 		if (najava.get()) {
 			fields[najavaPolje].setBorder(fields[1].getBorder());
@@ -256,6 +255,7 @@ public class Game extends Thread {
 			fields[i].setBorder(BorderFactory.createLineBorder(Color.RED, 4));
 			najavaPolje = i;
 		}
+		else najavaPolje = -1;
 	}
 	
 	public int[] updateSum(int i) {
@@ -499,6 +499,7 @@ public class Game extends Thread {
 		ps.println(val); // vrednost koja treba da se nalazi polju
 		ps.println(sum[0]); // indeks polja sume koje treba da se update
 		ps.println(sum[1]); // vrednost polja sume
+		yourTurn.set(false);
 		
 		clearAll();
 	}
@@ -516,6 +517,8 @@ public class Game extends Thread {
 	
 	public void checkEnd() {
 		if (!yourTurn.get()) return;
+		
+		if (!fields[0].isEnabled()) end.set(true);
 			
 		for (int i = 0; i < fields.length; i++) {
 			if (fields[i].isEnabled()) return;
@@ -611,7 +614,7 @@ public class Game extends Thread {
 					sendData(-1, -1, new int[] {-1, -1});
 				}
 				
-				yourTurn.set(false);
+				//yourTurn.set(false);
 			}
 		}
 		else {
