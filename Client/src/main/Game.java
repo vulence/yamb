@@ -15,13 +15,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 public class Game extends Thread {
 	private JButton[] kocke;
 	private JButton[] fields;
 	private JButton baciKocke;
 	private JLabel[] enemyFields;
-	private JLabel finalSum;
+	private JPanel endPanel;
+	private JLabel finalSum, opponentFinalSum, winText;
 	private int counter;
 	private static final int PORT = 4444;
 	private Socket socket;
@@ -33,12 +35,15 @@ public class Game extends Thread {
 	private AtomicBoolean yourTurn, najava, end;
 	private int najavaPolje;
 	
-	public Game(JButton[] kocke, JButton[] fields, JLabel[] enemyFields, JButton baciKocke, JLabel finalSum) {
+	public Game(JButton[] kocke, JButton[] fields, JLabel[] enemyFields, JButton baciKocke, JPanel endPanel, JLabel finalSum, JLabel opponentFinalSum, JLabel winText) {
 		this.counter = 0;
 		this.kocke = kocke;
 		this.fields = fields;
 		this.enemyFields = enemyFields;
+		this.endPanel = endPanel;
 		this.finalSum = finalSum;
+		this.opponentFinalSum = opponentFinalSum;
+		this.winText = winText;
 		this.baciKocke = baciKocke;
 		this.yourTurn = new AtomicBoolean(false);
 		this.najava = new AtomicBoolean(false);
@@ -413,6 +418,30 @@ public class Game extends Thread {
 		return totalSum;
 	}
 	
+	private void printEnd() {
+		int yourSum = getTotalSum();
+		int opponentSum = getTotalEnemySum();
+		
+		finalSum.setText(finalSum.getText() + Integer.toString(yourSum));
+		opponentFinalSum.setText(opponentFinalSum.getText() + Integer.toString(opponentSum));
+		
+		if (yourSum > opponentSum) {
+			winText.setForeground(Color.GREEN);
+			winText.setText("YOU WIN!");
+		}
+		else if (yourSum < opponentSum) {
+			winText.setForeground(Color.RED);
+			winText.setText("YOU LOSE!");
+		}
+		else {
+			winText.setForeground(Color.BLUE);
+			winText.setText("It's a tie!");
+		}
+		
+		endPanel.setVisible(true);
+		while (true) {}
+	}
+	
 	// tries to connect to an existing client
 	private boolean connect() {
 		try {
@@ -487,8 +516,6 @@ public class Game extends Thread {
 	
 	public void checkEnd() {
 		if (!yourTurn.get()) return;
-		
-		if (!fields[0].isEnabled()) end.set(true);
 			
 		for (int i = 0; i < fields.length; i++) {
 			if (fields[i].isEnabled()) return;
@@ -588,10 +615,7 @@ public class Game extends Thread {
 			}
 		}
 		else {
-			finalSum.setText(finalSum.getText() + Integer.toString(getTotalSum()));
-			finalSum.setText(finalSum.getText() + "\nTotal enemy sum: " + Integer.toString(getTotalEnemySum()));
-			finalSum.setVisible(true);
-			while (true) {}
+			printEnd();
 		}
 	}
 	

@@ -19,6 +19,7 @@ import javax.swing.SwingConstants;
 import org.w3c.dom.css.RGBColor;
 import java.awt.Color;
 import java.awt.event.MouseMotionAdapter;
+import javax.swing.JPanel;
 
 public class MainGUI {
 
@@ -36,6 +37,9 @@ public class MainGUI {
 	private JLabel[] enemyFields;
 	Game game;
 	private JLabel finalSum;
+	private JPanel endPanel;
+	private JLabel opponentFinalSum;
+	private JLabel winText;
 
 	/**
 	 * Launch the application.
@@ -66,6 +70,8 @@ public class MainGUI {
 	private void initialize() {
 		frame = new JFrame();
 		
+		frame.getContentPane().add(getEndPanel());
+		
 		prepareFields();
 		prepareEnemyFields();
 		for (int i = 0; i < 64; i++) {
@@ -76,7 +82,7 @@ public class MainGUI {
 		frame.setBounds(100, 100, 833, 815);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(null);
-		frame.getContentPane().add(getFinalSum());
+		
 		frame.getContentPane().add(getBaciKocke());
 		frame.getContentPane().add(getKocka1());
 		frame.getContentPane().add(getKocka2());
@@ -88,7 +94,7 @@ public class MainGUI {
 		
 		prepareKocke();
 		
-		game = new Game(kocke, fields, enemyFields, baciKocke, finalSum);
+		game = new Game(kocke, fields, enemyFields, baciKocke, endPanel, finalSum, opponentFinalSum, winText);
 		game.start();
 	}
 	private JLabel getLblNewLabel() {
@@ -268,13 +274,44 @@ public class MainGUI {
 
 	private JLabel getFinalSum() {
 		if (finalSum == null) {
-			finalSum = new JLabel("Your total score is:");
-			finalSum.setForeground(Color.RED);
+			finalSum = new JLabel("Your total score is: ");
+			finalSum.setBounds(10, 69, 777, 25);
+			finalSum.setForeground(Color.BLACK);
 			finalSum.setFont(new Font("Tahoma", Font.BOLD, 20));
 			finalSum.setHorizontalAlignment(SwingConstants.CENTER);
-			finalSum.setBounds(105, 204, 609, 169);
-			finalSum.setVisible(false);
 		}
 		return finalSum;
+	}
+	private JPanel getEndPanel() {
+		if (endPanel == null) {
+			endPanel = new JPanel();
+			endPanel.setBounds(10, 11, 797, 754);
+			endPanel.setLayout(null);
+			endPanel.add(getFinalSum());
+			endPanel.add(getOpponentFinalSum());
+			endPanel.add(getWinText());
+			endPanel.setVisible(false);
+		}
+		return endPanel;
+	}
+	private JLabel getOpponentFinalSum() {
+		if (opponentFinalSum == null) {
+			opponentFinalSum = new JLabel("Your opponent's total score is: ");
+			opponentFinalSum.setHorizontalAlignment(SwingConstants.CENTER);
+			opponentFinalSum.setForeground(Color.BLACK);
+			opponentFinalSum.setFont(new Font("Tahoma", Font.BOLD, 20));
+			opponentFinalSum.setBounds(10, 185, 777, 25);
+		}
+		return opponentFinalSum;
+	}
+	private JLabel getWinText() {
+		if (winText == null) {
+			winText = new JLabel("/");
+			winText.setHorizontalAlignment(SwingConstants.CENTER);
+			winText.setForeground(Color.RED);
+			winText.setFont(new Font("Tahoma", Font.BOLD, 20));
+			winText.setBounds(10, 542, 777, 25);
+		}
+		return winText;
 	}
 }
