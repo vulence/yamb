@@ -18,6 +18,7 @@ import javax.swing.SwingConstants;
 
 import org.w3c.dom.css.RGBColor;
 import java.awt.Color;
+import java.awt.event.MouseMotionAdapter;
 
 public class MainGUI {
 
@@ -34,7 +35,7 @@ public class MainGUI {
 	private JButton[] kocke;
 	private JLabel[] enemyFields;
 	Game game;
-	EndGUI endWindow;
+	private JLabel finalSum;
 
 	/**
 	 * Launch the application.
@@ -75,6 +76,7 @@ public class MainGUI {
 		frame.setBounds(100, 100, 833, 815);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(null);
+		frame.getContentPane().add(getFinalSum());
 		frame.getContentPane().add(getBaciKocke());
 		frame.getContentPane().add(getKocka1());
 		frame.getContentPane().add(getKocka2());
@@ -86,7 +88,7 @@ public class MainGUI {
 		
 		prepareKocke();
 		
-		game = new Game(kocke, fields, enemyFields, baciKocke);
+		game = new Game(kocke, fields, enemyFields, baciKocke, finalSum);
 		game.start();
 	}
 	private JLabel getLblNewLabel() {
@@ -180,11 +182,6 @@ public class MainGUI {
 			baciKocke = new JButton("BACAJ");
 			baciKocke.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
-					if (game.checkEnd()) {
-						endWindow = new EndGUI(game.getTotalSum());
-						endWindow.setVisible(true);
-						frame.setEnabled(false);
-					}
 					game.baciKocke(baciKocke);
 				}
 			});
@@ -269,4 +266,15 @@ public class MainGUI {
 		kocke[4] = kocka5;
 	}
 
+	private JLabel getFinalSum() {
+		if (finalSum == null) {
+			finalSum = new JLabel("Your total score is:");
+			finalSum.setForeground(Color.RED);
+			finalSum.setFont(new Font("Tahoma", Font.BOLD, 20));
+			finalSum.setHorizontalAlignment(SwingConstants.CENTER);
+			finalSum.setBounds(105, 204, 609, 169);
+			finalSum.setVisible(false);
+		}
+		return finalSum;
+	}
 }

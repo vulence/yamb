@@ -21,6 +21,7 @@ public class Game extends Thread {
 	private JButton[] fields;
 	private JButton baciKocke;
 	private JLabel[] enemyFields;
+	private JLabel finalSum;
 	private int counter;
 	private static final int PORT = 4444;
 	private Socket socket;
@@ -29,17 +30,19 @@ public class Game extends Thread {
 	private InputStream in;
 	private PrintStream ps;
 	private BufferedReader kb;
-	private AtomicBoolean yourTurn, najava;
+	private AtomicBoolean yourTurn, najava, end;
 	private int najavaPolje;
 	
-	public Game(JButton[] kocke, JButton[] fields, JLabel[] enemyFields, JButton baciKocke) {
+	public Game(JButton[] kocke, JButton[] fields, JLabel[] enemyFields, JButton baciKocke, JLabel finalSum) {
 		this.counter = 0;
 		this.kocke = kocke;
 		this.fields = fields;
 		this.enemyFields = enemyFields;
+		this.finalSum = finalSum;
 		this.baciKocke = baciKocke;
 		this.yourTurn = new AtomicBoolean(false);
 		this.najava = new AtomicBoolean(false);
+		this.end = new AtomicBoolean(false);
 		this.najavaPolje = -1;
 		setup();
 	}
@@ -50,22 +53,17 @@ public class Game extends Thread {
 	}
 	
 	public void baciKocke(JButton baciKocke) {
-		if (!checkEnd()) {
-			if (najava.get()) disableFields();
+		if (najava.get()) disableFields();
 			
-			disableNajava();
-			counter++;
+		disableNajava();
+		counter++;
 			
-			Random rand = new Random();
-			for (int i = 0; i < 5; i++) if (kocke[i].isEnabled()) kocke[i].setText(Integer.toString(rand.nextInt(6) + 1));
+		Random rand = new Random();
+		for (int i = 0; i < 5; i++) if (kocke[i].isEnabled()) kocke[i].setText(Integer.toString(rand.nextInt(6) + 1));
 			
-			if (counter == 3) {
-				disableKocke();
-				//if (najava.get()) upisiNajavu();
-			}
-		}
-		else {
-			sendData(-1, -1, new int[] {-1, -1});
+		if (counter == 3) {
+			disableKocke();
+			//if (najava.get()) upisiNajavu();
 		}
 	}
 	
@@ -397,11 +395,20 @@ public class Game extends Thread {
 		return res;
 	}
 	
-	public int getTotalSum() {
+	private int getTotalSum() {
 		int totalSum = 0;
 		for (int i = 6; i < fields.length; i += 16) totalSum += Integer.parseInt(fields[i].getText());
 		for (int i = 9; i < fields.length; i += 16) totalSum += Integer.parseInt(fields[i].getText());
 		for (int i = 15; i < fields.length; i += 16) totalSum += Integer.parseInt(fields[i].getText());
+		
+		return totalSum;
+	}
+	
+	private int getTotalEnemySum() {
+		int totalSum = 0;
+		for (int i = 6; i < enemyFields.length; i += 16) totalSum += Integer.parseInt(enemyFields[i].getText());
+		for (int i = 9; i < enemyFields.length; i += 16) totalSum += Integer.parseInt(enemyFields[i].getText());
+		for (int i = 15; i < enemyFields.length; i += 16) totalSum += Integer.parseInt(enemyFields[i].getText());
 		
 		return totalSum;
 	}
@@ -478,16 +485,16 @@ public class Game extends Thread {
 		clearKocke();
 	}
 	
-	public boolean checkEnd() {
-		if (!yourTurn.get()) return false;
+	public void checkEnd() {
+		if (!yourTurn.get()) return;
 		
-		boolean end = true;
+		if (!fields[0].isEnabled()) end.set(true);
 			
 		for (int i = 0; i < fields.length; i++) {
-			if (fields[i].isEnabled()) return false;
+			if (fields[i].isEnabled()) return;
 		}
 		
-		return true;
+		end.set(true);
 	}
 	
 	private void enableButtons() {
@@ -548,24 +555,43 @@ public class Game extends Thread {
 	private void tick() {		
 		String buf, value, sumValue;
 		int index, sumIndex;
-		if (yourTurn.compareAndSet(false, true)) {
-			try {
-				buf = kb.readLine();
-				index = Integer.parseInt(buf);
-				if (index != -1) { // ovo je za proveru kraja
-					value = kb.readLine();
-					enemyFields[index].setText(value);
-					
+		
+		if (!end.get()) {
+			if (!yourTurn.get()) {
+				try {
 					buf = kb.readLine();
-					sumIndex = Integer.parseInt(buf);
-					sumValue = kb.readLine();
-					
-					if (sumIndex != -1) enemyFields[sumIndex].setText(sumValue); // ovo je za proveru da li se sum polje updatuje
-					enableButtons();
+					index = Integer.parseInt(buf);
+					if (index != -1) { // ovo je za proveru kraja
+						value = kb.readLine();
+						enemyFields[index].setText(value);
+						
+						buf = kb.readLine();
+						sumIndex = Integer.parseInt(buf);
+						sumValue = kb.readLine();
+						
+						if (sumIndex != -1) enemyFields[sumIndex].setText(sumValue); // ovo je za proveru da li se sum polje updatuje
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-			} catch (Exception e) {
-				e.printStackTrace();
+				
+				yourTurn.set(true);
+				enableButtons();
 			}
+			else {
+				checkEnd();
+				if (end.get()) {
+					sendData(-1, -1, new int[] {-1, -1});
+				}
+				
+				yourTurn.set(false);
+			}
+		}
+		else {
+			finalSum.setText(finalSum.getText() + Integer.toString(getTotalSum()));
+			finalSum.setText(finalSum.getText() + "\nTotal enemy sum: " + Integer.toString(getTotalEnemySum()));
+			finalSum.setVisible(true);
+			while (true) {}
 		}
 	}
 	
