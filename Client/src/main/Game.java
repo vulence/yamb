@@ -71,6 +71,11 @@ public class Game extends Thread {
 		}
 	}
 	
+	public void clearAllFields() {
+		for (int i = 0; i < fields.length; i++) fields[i].setText("");
+		for (int i = 0; i < enemyFields.length; i++) enemyFields[i].setText("");
+	}
+	
 	public int[] getKocke() {
 		int[] sveKocke = new int[7];
 		sveKocke[1] = sveKocke[2] = sveKocke[3] = sveKocke[4] = sveKocke[5] = sveKocke[6] = 0;
@@ -423,8 +428,8 @@ public class Game extends Thread {
 		int yourSum = getTotalSum();
 		int opponentSum = getTotalEnemySum();
 		
-		finalSum.setText(finalSum.getText() + Integer.toString(yourSum));
-		opponentFinalSum.setText(opponentFinalSum.getText() + Integer.toString(opponentSum));
+		finalSum.setText("Your total score is: " + Integer.toString(yourSum));
+		opponentFinalSum.setText("Your opponent's total score is: " + Integer.toString(opponentSum));
 		
 		if (yourSum > opponentSum) {
 			winText.setForeground(Color.GREEN);
@@ -441,6 +446,14 @@ public class Game extends Thread {
 		
 		endPanel.setVisible(true);
 		while (true) {}
+	}
+	
+	private void printWaiting() {
+		finalSum.setText("");
+		winText.setText("");
+		opponentFinalSum.setText("Waiting for another player to join..");
+		
+		endPanel.setVisible(true);
 	}
 	
 	// tries to connect to an existing client
@@ -479,8 +492,13 @@ public class Game extends Thread {
 	private void init() {
 		if (!connect()) {
 			startServer();
+			
+			printWaiting();
+			
 			listener();
 		}
+		
+		endPanel.setVisible(false);
 		
 		try {
 			in = socket.getInputStream();
@@ -500,6 +518,7 @@ public class Game extends Thread {
 		ps.println(val); // vrednost koja treba da se nalazi polju
 		ps.println(sum[0]); // indeks polja sume koje treba da se update
 		ps.println(sum[1]); // vrednost polja sume
+		
 		yourTurn.set(false);
 		
 		clearAll();
@@ -519,13 +538,23 @@ public class Game extends Thread {
 	public void checkEnd() {
 		if (!yourTurn.get()) return;
 		
-		if (!fields[0].isEnabled()) end.set(true);
+		//if (!fields[0].isEnabled()) end.set(true);
 			
 		for (int i = 0; i < fields.length; i++) {
 			if (fields[i].isEnabled()) return;
 		}
 		
 		end.set(true);
+	}
+	
+	public boolean startNewGame() {
+		if (yourTurn.get()) {
+			clearAllFields();
+			sendData(-2, 0, new int[] {0, 0});
+			return true;
+		}
+		
+		return false;
 	}
 	
 	private void enableButtons() {
@@ -592,15 +621,19 @@ public class Game extends Thread {
 				try {
 					buf = kb.readLine();
 					index = Integer.parseInt(buf);
-					if (index != -1) { // ovo je za proveru kraja
-						value = kb.readLine();
+					value = kb.readLine();
+					
+					
+					buf = kb.readLine();
+					sumIndex = Integer.parseInt(buf);
+					sumValue = kb.readLine();
+					
+					if (index == -2) {	// checks for new game
+						clearAllFields();
+					}
+					else if (index != -1) {	// checks for end
 						enemyFields[index].setText(value);
-						
-						buf = kb.readLine();
-						sumIndex = Integer.parseInt(buf);
-						sumValue = kb.readLine();
-						
-						if (sumIndex != -1) enemyFields[sumIndex].setText(sumValue); // ovo je za proveru da li se sum polje updatuje
+						if (sumIndex != -1) enemyFields[sumIndex].setText(sumValue);	// checks if sum field needs updating
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -614,8 +647,6 @@ public class Game extends Thread {
 				if (end.get()) {
 					sendData(-1, -1, new int[] {-1, -1});
 				}
-				
-				//yourTurn.set(false);
 			}
 		}
 		else {

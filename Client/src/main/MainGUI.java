@@ -1,12 +1,7 @@
 package main;
 
 import java.awt.EventQueue;
-
-import javax.swing.JFrame;
 import java.awt.BorderLayout;
-import javax.swing.JLabel;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
@@ -14,12 +9,12 @@ import java.awt.event.MouseEvent;
 import java.util.Arrays;
 import java.util.Random;
 import java.awt.Font;
-import javax.swing.SwingConstants;
 
 import org.w3c.dom.css.RGBColor;
 import java.awt.Color;
 import java.awt.event.MouseMotionAdapter;
-import javax.swing.JPanel;
+
+import javax.swing.*;
 
 public class MainGUI {
 
@@ -40,6 +35,11 @@ public class MainGUI {
 	private JPanel endPanel;
 	private JLabel opponentFinalSum;
 	private JLabel winText;
+	private JMenuBar menuBar;
+	private JMenu gameMenu;
+	private JMenu aboutMenu;
+	private JMenuItem howToPlayItem;
+	private JMenuItem newGameItem;
 
 	/**
 	 * Launch the application.
@@ -69,6 +69,7 @@ public class MainGUI {
 	 */
 	private void initialize() {
 		frame = new JFrame();
+		frame.setResizable(false);
 		
 		frame.getContentPane().add(getEndPanel());
 		
@@ -79,7 +80,7 @@ public class MainGUI {
 			frame.getContentPane().add(enemyFields[i]);
 		}
 		
-		frame.setBounds(100, 100, 833, 815);
+		frame.setBounds(100, 100, 833, 838);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(null);
 		
@@ -95,6 +96,7 @@ public class MainGUI {
 		prepareKocke();
 		
 		game = new Game(kocke, fields, enemyFields, baciKocke, endPanel, finalSum, opponentFinalSum, winText);
+		frame.setJMenuBar(getMenuBar());
 		game.start();
 	}
 	private JLabel getLblNewLabel() {
@@ -185,7 +187,7 @@ public class MainGUI {
 	}
 	private JButton getBaciKocke() {
 		if (baciKocke == null) {
-			baciKocke = new JButton("BACAJ");
+			baciKocke = new JButton("THROW");
 			baciKocke.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					game.baciKocke(baciKocke);
@@ -313,5 +315,57 @@ public class MainGUI {
 			winText.setBounds(10, 542, 777, 25);
 		}
 		return winText;
+	}
+	private JMenuBar getMenuBar() {
+		if (menuBar == null) {
+			menuBar = new JMenuBar();
+			menuBar.add(getGameMenu());
+			menuBar.add(getAboutMenu());
+		}
+		return menuBar;
+	}
+	private JMenu getGameMenu() {
+		if (gameMenu == null) {
+			gameMenu = new JMenu("Game");
+			gameMenu.add(getNewGameItem());
+		}
+		return gameMenu;
+	}
+	private JMenu getAboutMenu() {
+		if (aboutMenu == null) {
+			aboutMenu = new JMenu("About");
+			aboutMenu.add(getHowToPlayItem());
+		}
+		return aboutMenu;
+	}
+	private JMenuItem getHowToPlayItem() {
+		if (howToPlayItem == null) {
+			howToPlayItem = new JMenuItem("How To Play");
+			howToPlayItem.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					HowToPlayGUI htpGUI = new HowToPlayGUI();
+					htpGUI.setLocationRelativeTo(frame);
+					htpGUI.setVisible(true);
+				}
+			});
+			howToPlayItem.setHorizontalAlignment(SwingConstants.CENTER);
+			howToPlayItem.setVerticalAlignment(SwingConstants.CENTER);
+		}
+		return howToPlayItem;
+	}
+	private JMenuItem getNewGameItem() {
+		if (newGameItem == null) {
+			newGameItem = new JMenuItem("New Game");
+			newGameItem.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseReleased(MouseEvent e) {
+					if (!game.startNewGame()) {
+						JOptionPane.showMessageDialog(frame, "It has to be your turn if you want to start a new game!", "Error", JOptionPane.ERROR_MESSAGE);
+					}
+				}
+			});
+		}
+		return newGameItem;
 	}
 }
